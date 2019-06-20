@@ -1,20 +1,24 @@
+#include <Scheduler.h>
+
 int R1 = 2;
 int R2 = 3;
-int start = 0;
 
 void setup() {
-  // put your setup code here, to run once:
-  pinMode(R1, OUTPUT);
-  pinMode(R2, OUTPUT);
-
-  digitalWrite(R1, LOW);
-  digitalWrite(R2, LOW);
-  start = millis();
+  digitalWrite(R1, HIGH);
+  digitalWrite(R2, HIGH);
   Serial.begin(9600);
+  Scheduler.startLoop(loop1);
+  //Scheduler.start(setupPin<R1>, startPump<R1, 10000>, 64);
 }
 
 void loop() {
-  MixDrink(start, 60000, 20000, R1, R2);
+  yield();
+}
+
+void loop1() {
+  digitalWrite(13, HIGH);
+  delay(100);
+  digitalWrite(13, LOW);
 }
 
 void MixDrink(long start, long mix, long booze, int mixPin, int boozePin) {
