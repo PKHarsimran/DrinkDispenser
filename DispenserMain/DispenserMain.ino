@@ -1,10 +1,4 @@
-#include <ClickEncoder.h>
 
-/*
- * Displays text sent over the serial port (e.g. from the Serial Monitor) on
- * an attached LCD.
- */
-#include <Encoder.h>
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
 
@@ -13,10 +7,11 @@ int val;
 int encoder0PinA = 11;
 int encoder0PinB = 12;
 int encoder0Pos = 0;
-int encoder0PinALast = LOW;
-int n = LOW;
-#define enCoder0Btn 12
-int enCoderPos = 0;
+ int aState;
+ int aLastState;  
+#define enCoder0Btn 10
+ int counter = 0; 
+ // Realy with Pumps !
 int R1 = 2;
 int R2 = 3;
 int R3 = 4;
@@ -25,8 +20,15 @@ int R5 = 6;
 int R6 = 7;
 int R7 = 8;
 int R8 = 9;
-char Data = 0;
+// Solon
+int S1 = A0;
+int S2 = A1;
+int S3 = A3;
+int S4 = A5;
+
+char Data = 0; // data from Serial Connection Aka bluetooth
   int selection = 0;
+    int currDispense = 0;
    char *ComboArray[] = {"Rum & Coke", "Gin & Tonic", "Long Island", "Scredriver","Margarita","Gin & Juice","Tequila Sunrise"};
    boolean Dispense = false;
    unsigned long previousTimer  = 0;
@@ -48,6 +50,7 @@ void setup()
                 
   pinMode (encoder0PinA, INPUT);
   pinMode (encoder0PinB, INPUT);
+  pinMode (enCoder0Btn, INPUT);
   Serial.begin(9600);
    lcd.setCursor(0,0);
    lcd.write("Welcome :)");
@@ -62,32 +65,48 @@ void setup()
                         digitalWrite(R8, HIGH);
 
                         
- 
+  aLastState = digitalRead(encoder0PinA);  
 }
-long oldPosition  = -999;
+
 void loop()
 {
+  if (Dispense == false)
+  currDispense = selection;
+bool btnStatus = digitalRead(enCoder0Btn);
+//Serial.print ("btnStatus : ");
+//Serial.println(btnStatus);
+enCoder();
 
-   enCoder();
-  
+  if (selection > 0 && btnStatus == LOW)
+  Dispense = true;
 SerialRead();
-
+ //CombosDisplay(selection);
  if (Dispense)
    DrinkSelected();
 }
 void enCoder()
 {
-   n = digitalRead(encoder0PinA);
-  if ((encoder0PinALast == LOW) && (n == HIGH)) {
-    if (digitalRead(encoder0PinB) == LOW) {
-      encoder0Pos--;
-    } else {
-      encoder0Pos++;
-    }
-  }
-  encoder0PinALast = n;
-  selection = encoder0Pos;
-  CombosDisplay(selection);
+  delay(10);
+   aState = digitalRead(encoder0PinA); // Reads the "current" state of the outputA
+   // If the previous and the current state of the outputA are different, that means a Pulse has occured
+   if (aState != aLastState){     
+     // If the outputB state is different to the outputA state, that means the encoder is rotating clockwise
+     if (digitalRead(encoder0PinB) != aState) { 
+       counter ++;
+       selection = counter;
+    CombosDisplay(selection);
+     } else {
+       counter --;
+       selection = counter;
+    CombosDisplay(selection);
+     }
+      if (counter >= 8 || counter <=0 )
+    counter = 1;
+     Serial.print("Position: ");
+     Serial.println(counter);
+   } 
+   aLastState = aState; // Updates the previous state of the outputA with the current state
+     selection = counter;
 }
 void SerialRead(){
   if (Serial.available()>0) 
@@ -162,8 +181,10 @@ void DebuggerPrint(String D)
 }
 void DrinkSelected()
 {
+
+  
    
-    switch (selection) {
+    switch (currDispense) {
      case 1 :
      // Rum & Coke
       DrinkTimer(50000,0,0,0,0,15000,0,0);
